@@ -1,0 +1,132 @@
+@model ZokaAnalytics.Services.Analysis.StandingsTable
+@{
+    ViewData["Title"] = "Puan Durumu";
+    var leagues = ViewBag.Leagues as List<LeagueFilterItem> ?? new();
+    var selectedId = ViewBag.SelectedLeagueId as int?;
+    var scope = ViewBag.Scope as string ?? "all";
+    var seasons = ViewBag.Seasons as List<int> ?? new();
+    var selectedSeason = ViewBag.SelectedSeason as int?;
+}
+
+<div class="page-head">
+    <h1>Puan Durumu</h1>
+    <div class="tabs">
+        <a class="tab @(scope == "all" ? "active" : "")"
+           asp-action="Index" asp-route-leagueId="@selectedId" asp-route-scope="all">Genel</a>
+        <a class="tab @(scope == "home" ? "active" : "")"
+           asp-action="Index" asp-route-leagueId="@selectedId" asp-route-scope="home">İç Saha</a>
+        <a class="tab @(scope == "away" ? "active" : "")"
+           asp-action="Index" asp-route-leagueId="@selectedId" asp-route-scope="away">Deplasman</a>
+    </div>
+</div>
+
+<div class="league-filter">
+    @foreach (var l in leagues)
+    {
+        <a class="pill @(selectedId == l.Id ? "active" : "")"
+           asp-action="Index" asp-route-leagueId="@l.Id" asp-route-scope="@scope">
+            @if (!string.IsNullOrEmpty(l.LogoUrl)) { <img src="@l.LogoUrl" alt="" /> }
+            @l.Name
+        </a>
+    }
+</div>
+
+@if (seasons.Count > 1)
+{
+    <div class="league-filter season-filter">
+        @foreach (var sn in seasons)
+        {
+            <a class="pill @(selectedSeason == sn ? "active" : "")"
+               asp-action="Index" asp-route-leagueId="@selectedId"
+               asp-route-season="@sn" asp-route-scope="@scope">
+                @ZokaAnalytics.Services.Sync.SeasonResolver.Label(sn)
+            </a>
+        }
+    </div>
+}
+
+@if (Model is null)
+{
+    <div class="empty">Bu lig için henüz oynanmış maç yok.</div>
+}
+else
+{
+    <div class="panel table-panel">
+        <div class="std-head">
+            <div>
+                <h3>@Model.LeagueName</h3>
+                <span class="muted small">@ZokaAnalytics.Services.Sync.SeasonResolver.Label(Model.Season) sezonu · @Model.Rows.Count takım</span>
+            </div>
+            <span class="muted small">
+                Güncelleme: @(Model.LastUpdatedUtc?.ToLocalTime().ToString("dd.MM HH:mm") ?? "-")
+            </span>
+        </div>
+
+        <table class="std-table">
+            <thead>
+                <tr>
+                    <th class="c">#</th>
+                    <th>Takım</th>
+                    <th class="c">O</th>
+                    <th class="c">G</th>
+                    <th class="c">B</th>
+                    <th class="c">M</th>
+                    <th class="c">A</th>
+                    <th class="c">Y</th>
+                    <th class="c">Av</th>
+                    <th class="c">P</th>
+                    <th class="c hide-sm">Form</th>
+                    <th class="c hide-sm">Güç</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                var zone = row.Rank <= 4 ? "z-ucl"
+                    : row.Rank <= 6 ? "z-uel"
+                    : row.Rank > Model.Rows.Count - 3 ? "z-drop" : "";
+
+                <tr class="@zone">
+                    <td class="c rank">@row.Rank</td>
+                    <td class="std-team">
+                        @if (!string.IsNullOrEmpty(row.LogoUrl))
+                        {
+                            <img src="@row.LogoUrl" alt="" />
+                        }
+                        <span>@row.TeamName</span>
+                    </td>
+                    <td class="c">@row.Played</td>
+                    <td class="c">@row.Wins</td>
+                    <td class="c">@row.Draws</td>
+                    <td class="c">@row.Losses</td>
+                    <td class="c">@row.GoalsFor</td>
+                    <td class="c">@row.GoalsAgainst</td>
+                    <td class="c">@(row.GoalDifference > 0 ? "+" : "")@row.GoalDifference</td>
+                    <td class="c pts">@row.Points</td>
+                    <td class="c hide-sm">
+                        <span class="form-mini">
+                            @foreach (var ch in row.Form)
+                            {
+                                <i class="f-@ch">@ch</i>
+                            }
+                        </span>
+                    </td>
+                    <td class="c hide-sm muted">@row.Strength.ToString("0")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <div class="std-legend">
+            <span><i class="dot z-ucl"></i> Şampiyonlar Ligi</span>
+            <span><i class="dot z-uel"></i> Avrupa</span>
+            <span><i class="dot z-drop"></i> Küme düşme</span>
+        </div>
+    </div>
+
+    <p class="muted small">
+        Tablo, veritabanındaki tamamlanmış maçlardan hesaplanır. Sıralama kuralı:
+        puan → averaj → atılan gol. Resmi tabloyla küçük farklar olabilir (puan silme,
+        hükmen sonuçlar bu hesaba girmez).
+    </p>
+}

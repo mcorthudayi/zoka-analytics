@@ -1,0 +1,25 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Giriş";
+}
+
+<div class="auth-card">
+    <h1>Giriş yap</h1>
+    <form asp-action="Login" method="post">
+        <input type="hidden" asp-for="ReturnUrl" />
+        <div asp-validation-summary="ModelOnly" class="validation"></div>
+
+        <label asp-for="Email"></label>
+        <input asp-for="Email" autocomplete="email" />
+        <span asp-validation-for="Email" class="validation"></span>
+
+        <label asp-for="Password"></label>
+        <input asp-for="Password" autocomplete="current-password" />
+        <span asp-validation-for="Password" class="validation"></span>
+
+        <label class="check"><input asp-for="RememberMe" type="checkbox" /> Beni hatırla</label>
+
+        <button type="submit" class="btn btn-primary full">Giriş yap</button>
+    </form>
+    <p class="muted small">Hesabın yok mu? <a asp-action="Register">Kayıt ol</a></p>
+</div>

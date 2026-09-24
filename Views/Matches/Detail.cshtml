@@ -1,0 +1,244 @@
+@model MatchDetailViewModel
+@{
+    ViewData["Title"] = $"{Model.Match.HomeTeamName} - {Model.Match.AwayTeamName}";
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="detail-head">
+    <span class="league-name">@Model.Match.LeagueName</span>
+    <div class="detail-teams">
+        <div class="detail-team">
+            @if (!string.IsNullOrEmpty(Model.Match.HomeTeamLogoUrl))
+            {
+                <img src="@Model.Match.HomeTeamLogoUrl" alt="" />
+            }
+            <h2>@Model.Match.HomeTeamName</h2>
+            @if (User.Identity!.IsAuthenticated && ViewBag.HomeTeamId != null)
+            {
+                <button type="button" class="fav-team @(ViewBag.HomeTeamFavorite == true ? "on" : "")"
+                        data-team="@ViewBag.HomeTeamId">★ Takımı takip et</button>
+            }
+        </div>
+        <div class="detail-score">
+            @if (User.Identity!.IsAuthenticated)
+            {
+                <button type="button" class="fav-btn big @(Model.Match.IsFavorite ? "on" : "")"
+                        data-match="@Model.Match.MatchId" title="Maçı favorile">★</button>
+            }
+            <span class="score-big">@Model.Match.ScoreText</span>
+            <span class="status status-@Model.Match.Status.ToString().ToLower()">@Model.Match.StatusText</span>
+        </div>
+        <div class="detail-team">
+            @if (!string.IsNullOrEmpty(Model.Match.AwayTeamLogoUrl))
+            {
+                <img src="@Model.Match.AwayTeamLogoUrl" alt="" />
+            }
+            <h2>@Model.Match.AwayTeamName</h2>
+            @if (User.Identity!.IsAuthenticated && ViewBag.AwayTeamId != null)
+            {
+                <button type="button" class="fav-team @(ViewBag.AwayTeamFavorite == true ? "on" : "")"
+                        data-team="@ViewBag.AwayTeamId">★ Takımı takip et</button>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.PredictionLocked)
+{
+    <div class="panel locked">
+        <h3>Tahmin kilitli</h3>
+        <p class="muted">@Model.LockReason</p>
+        @if (!User.Identity!.IsAuthenticated)
+        {
+            <a class="btn btn-primary" asp-controller="Account" asp-action="Login"
+               asp-route-returnUrl="@Context.Request.Path">Giriş yap</a>
+        }
+    </div>
+}
+else if (Model.Prediction is not null)
+{
+    var p = Model.Prediction;
+
+    <div class="panel">
+        <div class="panel-head">
+            <h3>Model Tahmini</h3>
+            <span class="badge">@p.ModelVersion · Güven @p.Confidence.ToString("0.#")</span>
+        </div>
+
+        <div class="prob-bar big">
+            <span class="p-home" style="width:@((p.HomeWinProbability * 100).ToString("0.#", ci))%"></span>
+            <span class="p-draw" style="width:@((p.DrawProbability * 100).ToString("0.#", ci))%"></span>
+            <span class="p-away" style="width:@((p.AwayWinProbability * 100).ToString("0.#", ci))%"></span>
+        </div>
+        <div class="prob-legend big">
+            <span><b>1</b> @((p.HomeWinProbability * 100).ToString("0.#"))%</span>
+            <span><b>X</b> @((p.DrawProbability * 100).ToString("0.#"))%</span>
+            <span><b>2</b> @((p.AwayWinProbability * 100).ToString("0.#"))%</span>
+        </div>
+
+        <div class="metric-row">
+            <div class="metric">
+                <span class="metric-value">@p.ExpectedHomeGoals.ToString("0.00") - @p.ExpectedAwayGoals.ToString("0.00")</span>
+                <span class="metric-label">Beklenen gol (xG)</span>
+            </div>
+            <div class="metric">
+                <span class="metric-value">@((p.Over25Probability * 100).ToString("0"))%</span>
+                <span class="metric-label">2.5 Üst</span>
+            </div>
+            <div class="metric">
+                <span class="metric-value">@((p.BttsProbability * 100).ToString("0"))%</span>
+                <span class="metric-label">Karşılıklı gol</span>
+            </div>
+        </div>
+
+        @if (ViewBag.Context is MatchContext mc && mc.HasAnyAdjustment)
+        {
+            <div class="ctx-note">
+                <b>Manuel düzeltme uygulandı</b>
+                <span>@mc.Summary()</span>
+                @if (!string.IsNullOrWhiteSpace(mc.Note))
+                {
+                    <span class="muted small">@mc.Note</span>
+                }
+                <span class="muted small">
+                    Bu bilgiler modelden değil, editör girişinden gelir ve beklenen gol değerini düzeltir.
+                </span>
+            </div>
+        }
+
+        @if (!Model.QuotaUnlimited)
+        {
+            <p class="muted small">Günlük tahmin hakkı: @Model.QuotaUsed / @Model.QuotaLimit</p>
+        }
+    </div>
+}
+
+@if (Model.TopScores.Any())
+{
+    <div class="panel">
+        <h3>Skor Tahmini</h3>
+        <p class="muted small">Beklenen gollerden türetilen en olası skorlar.</p>
+
+        <div class="score-grid">
+            @foreach (var line in Model.TopScores)
+            {
+                <div class="score-card">
+                    <span class="score-line">@line.Text</span>
+                    <span class="score-prob">%@((line.Probability * 100).ToString("0.#"))</span>
+                    <div class="score-bar">
+                        <span style="width:@((line.Probability * 100 / Model.TopScores[0].Probability / 100 * 100).ToString("0.#", ci))%"></span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="metric-row">
+            @foreach (var market in Model.GoalMarkets)
+            {
+                <div class="metric">
+                    <span class="metric-value">%@((market.Probability * 100).ToString("0"))</span>
+                    <span class="metric-label">@market.Label</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (Model.HomeStrength is not null && Model.AwayStrength is not null)
+{
+    <div class="panel">
+        <h3>Güç Karşılaştırması</h3>
+        @{
+            var pairs = new (string Label, double Home, double Away)[]
+            {
+                ("Genel", Model.HomeStrength.OverallStrength, Model.AwayStrength.OverallStrength),
+                ("Hücum", Model.HomeStrength.AttackStrength, Model.AwayStrength.AttackStrength),
+                ("Defans", Model.HomeStrength.DefenceStrength, Model.AwayStrength.DefenceStrength),
+                ("Saha avantajı", Model.HomeStrength.HomeStrength, Model.AwayStrength.AwayStrength)
+            };
+        }
+        @foreach (var pair in pairs)
+        {
+            var total = pair.Home + pair.Away;
+            var homePct = total > 0 ? pair.Home / total * 100 : 50;
+            <div class="compare">
+                <span class="compare-value">@pair.Home.ToString("0.#")</span>
+                <div class="compare-bar">
+                    <span style="width:@homePct.ToString("0.#", ci)%"></span>
+                </div>
+                <span class="compare-value">@pair.Away.ToString("0.#")</span>
+                <span class="compare-label">@pair.Label</span>
+            </div>
+        }
+    </div>
+}
+
+@if (Model.HomeForm is not null || Model.AwayForm is not null)
+{
+    <div class="panel two-col">
+        @foreach (var form in new[] { Model.HomeForm, Model.AwayForm })
+        {
+            if (form is null) { continue; }
+            <div>
+                <h3>@form.TeamName · Son Form</h3>
+                <div class="form-row">
+                    @foreach (var ch in form.FormString)
+                    {
+                        <span class="form-badge f-@ch">@ch</span>
+                    }
+                    @if (string.IsNullOrEmpty(form.FormString))
+                    {
+                        <span class="muted small">Yeterli maç verisi yok</span>
+                    }
+                </div>
+                <p class="muted small">
+                    Form skoru @form.FormScore.ToString("0.#") ·
+                    @form.Wins G / @form.Draws B / @form.Losses M ·
+                    Attığı @form.AvgGoalsFor.ToString("0.0") · Yediği @form.AvgGoalsAgainst.ToString("0.0")
+                </p>
+            </div>
+        }
+    </div>
+}
+
+@if (Model.H2H is not null && Model.H2H.TotalMatches > 0)
+{
+    <div class="panel">
+        <h3>Karşılıklı Geçmiş (@Model.H2H.TotalMatches maç)</h3>
+        <div class="metric-row">
+            <div class="metric">
+                <span class="metric-value">@Model.H2H.HomeTeamWins - @Model.H2H.Draws - @Model.H2H.AwayTeamWins</span>
+                <span class="metric-label">G / B / M</span>
+            </div>
+            <div class="metric">
+                <span class="metric-value">@Model.H2H.AvgTotalGoals.ToString("0.00")</span>
+                <span class="metric-label">Maç başı gol</span>
+            </div>
+            <div class="metric">
+                <span class="metric-value">@((Model.H2H.Over25Rate * 100).ToString("0"))%</span>
+                <span class="metric-label">2.5 Üst oranı</span>
+            </div>
+            <div class="metric">
+                <span class="metric-value">@((Model.H2H.BttsRate * 100).ToString("0"))%</span>
+                <span class="metric-label">KG Var oranı</span>
+            </div>
+        </div>
+
+        <table class="table">
+            <tbody>
+            @foreach (var meeting in Model.H2H.RecentMeetings)
+            {
+                <tr>
+                    <td class="muted small">@meeting.KickoffUtc.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                    <td>@meeting.HomeTeamName</td>
+                    <td class="center"><b>@meeting.HomeGoals - @meeting.AwayGoals</b></td>
+                    <td>@meeting.AwayTeamName</td>
+                    <td class="muted small">@meeting.LeagueName</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+<a class="btn btn-ghost" asp-action="Index" asp-route-mode="upcoming">← Maç listesine dön</a>

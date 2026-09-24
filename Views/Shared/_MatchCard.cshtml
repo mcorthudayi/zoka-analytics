@@ -1,0 +1,50 @@
+@model MatchListItemViewModel
+
+<a class="match-card" asp-controller="Matches" asp-action="Detail" asp-route-id="@Model.MatchId">
+    <div class="match-meta">
+        @if (!string.IsNullOrEmpty(Model.LeagueLogoUrl))
+        {
+            <img src="@Model.LeagueLogoUrl" alt="" class="league-logo" />
+        }
+        <span class="league-name">@Model.LeagueName</span>
+        <span class="status status-@Model.Status.ToString().ToLower()">@Model.StatusText</span>
+    </div>
+
+    <div class="match-teams">
+        <div class="team">
+            @if (!string.IsNullOrEmpty(Model.HomeTeamLogoUrl))
+            {
+                <img src="@Model.HomeTeamLogoUrl" alt="" />
+            }
+            <span>@Model.HomeTeamName</span>
+        </div>
+
+        <div class="score">@Model.ScoreText</div>
+
+        <div class="team team-away">
+            <span>@Model.AwayTeamName</span>
+            @if (!string.IsNullOrEmpty(Model.AwayTeamLogoUrl))
+            {
+                <img src="@Model.AwayTeamLogoUrl" alt="" />
+            }
+        </div>
+    </div>
+
+    @if (Model.HasPrediction && Model.HomeWinProbability.HasValue)
+    {
+        <div class="prob-bar" title="Model olasılıkları">
+            <span class="p-home" style="width:@((Model.HomeWinProbability.Value * 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+            <span class="p-draw" style="width:@((Model.DrawProbability!.Value * 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+            <span class="p-away" style="width:@((Model.AwayWinProbability!.Value * 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+        </div>
+        <div class="prob-legend">
+            <span>1 · @((Model.HomeWinProbability.Value * 100).ToString("0"))%</span>
+            <span>X · @((Model.DrawProbability!.Value * 100).ToString("0"))%</span>
+            <span>2 · @((Model.AwayWinProbability!.Value * 100).ToString("0"))%</span>
+        </div>
+    }
+    else
+    {
+        <div class="prob-empty">Tahmin henüz üretilmedi</div>
+    }
+</a>

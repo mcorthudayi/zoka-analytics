@@ -1,0 +1,77 @@
+@model Coupon
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="panel">
+    <div class="panel-head">
+        <h1>@Model.Title</h1>
+        <span class="state coupon-@Model.Status.ToString().ToLower()">
+            @(Model.Status switch
+            {
+                CouponStatus.Open => "Devam ediyor",
+                CouponStatus.Won => "Kazandı",
+                CouponStatus.Lost => "Kaybetti",
+                _ => "İptal"
+            })
+        </span>
+    </div>
+
+    <div class="metric-row">
+        <div class="metric">
+            <span class="metric-value">@Model.TotalOdds.ToString("0.00")</span>
+            <span class="metric-label">Toplam oran</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">@Model.Stake.ToString("0") ₺</span>
+            <span class="metric-label">Tutar</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">@Model.PotentialReturn.ToString("0.00") ₺</span>
+            <span class="metric-label">@(Model.Status == CouponStatus.Won ? "Kazanç" : "Olası kazanç")</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">@Model.Items.Count</span>
+            <span class="metric-label">Seçim</span>
+        </div>
+    </div>
+</div>
+
+<div class="panel">
+    <h3>Seçimler</h3>
+    <table class="table">
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="muted small">@item.Match.KickoffUtc.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                <td>@item.Match.HomeTeam.Name - @item.Match.AwayTeam.Name</td>
+                <td>@item.SelectionLabel</td>
+                <td class="center">
+                    @(item.Match.HomeGoals.HasValue ? $"{item.Match.HomeGoals}-{item.Match.AwayGoals}" : "-")
+                </td>
+                <td class="center"><b>@item.Odds.ToString("0.00")</b></td>
+                <td>
+                    <span class="state sel-@item.Status.ToString().ToLower()">
+                        @(item.Status switch
+                        {
+                            SelectionStatus.Won => "Tuttu",
+                            SelectionStatus.Lost => "Tutmadı",
+                            SelectionStatus.Void => "İptal",
+                            _ => "Bekliyor"
+                        })
+                    </span>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="btn-row">
+    <a class="btn btn-ghost" asp-action="Index">← Kuponlarım</a>
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="inline">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-danger">Kuponu sil</button>
+    </form>
+</div>

@@ -1,0 +1,91 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Yönetim";
+}
+
+<h1>Yönetim Paneli</h1>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-error">@err</div>
+}
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-ok">@ok</div>
+}
+
+<div class="stats">
+    <div class="stat"><span class="stat-value">@Model.UserCount</span><span class="stat-label">Kullanıcı</span></div>
+    <div class="stat"><span class="stat-value">@Model.MatchCount.ToString("N0")</span><span class="stat-label">Maç</span></div>
+    <div class="stat"><span class="stat-value">@Model.TeamCount</span><span class="stat-label">Takım</span></div>
+    <div class="stat"><span class="stat-value">@Model.PredictionCount</span><span class="stat-label">Tahmin</span></div>
+    <div class="stat"><span class="stat-value">@Model.Accuracy.ToString("0.#")%</span><span class="stat-label">Doğruluk (@Model.SettledPredictions)</span></div>
+    <div class="stat"><span class="stat-value">@Model.CouponCount</span><span class="stat-label">Kupon</span></div>
+    <div class="stat"><span class="stat-value">@(Model.ModelLoaded ? "ML" : "Poisson")</span><span class="stat-label">Model</span></div>
+</div>
+
+<div class="panel">
+    <h3>İşlemler</h3>
+    <div class="btn-row">
+        <form asp-action="RunSync" method="post" class="inline">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-primary">Veri senkronize et</button>
+        </form>
+        <form asp-action="Train" method="post" class="inline">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-ghost">Modeli eğit</button>
+        </form>
+        <form asp-action="Predict" method="post" class="inline">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-ghost">Tahmin üret</button>
+        </form>
+        <form asp-action="Settle" method="post" class="inline">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-ghost">Sonuçlandır</button>
+        </form>
+        <a class="btn btn-ghost" asp-action="Context">Maç bağlamı</a>
+        <a class="btn btn-ghost" asp-action="Users">Kullanıcılar</a>
+    </div>
+    <p class="muted small">Senkronizasyon API kotası tüketir, gereksiz tekrarlamayın.</p>
+</div>
+
+<div class="panel">
+    <h3>Ligler</h3>
+    <table class="table">
+        <tbody>
+        @foreach (var l in Model.LeagueStats)
+        {
+            <tr>
+                <td>@l.Name</td>
+                <td class="center">@l.Matches maç</td>
+                <td class="center">@l.Predictions tahmin</td>
+                <td class="muted small">
+                    @(l.LastSyncedAtUtc?.ToLocalTime().ToString("dd.MM HH:mm") ?? "hiç")
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="panel">
+    <h3>Son Senkronizasyonlar</h3>
+    <table class="table">
+        <tbody>
+        @foreach (var s in Model.RecentSyncs)
+        {
+            <tr>
+                <td class="muted small">@s.StartedAtUtc.ToLocalTime().ToString("dd.MM HH:mm:ss")</td>
+                <td>@s.Step</td>
+                <td class="center">@s.ItemsProcessed kayıt</td>
+                <td>
+                    <span class="state @(s.Status == SyncStatus.Success ? "sel-won" : s.Status == SyncStatus.Failed ? "sel-lost" : "")">
+                        @s.Status
+                    </span>
+                </td>
+                <td class="muted small">@s.Message</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

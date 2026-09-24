@@ -1,0 +1,65 @@
+@model List<ZokaAnalytics.Services.Coupons.WeeklyCoupon>
+@{
+    ViewData["Title"] = "Haftanın Kuponu";
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <h1>Haftanın Kuponu</h1>
+    <a class="btn btn-ghost" asp-action="Index">Kendi kuponunu yap →</a>
+</div>
+
+<p class="muted">
+    Model, önümüzdeki 7 günün maçlarını 14 farklı pazarda değerlendirdi.
+    Aşağıdaki kuponlar risk seviyesine göre otomatik kuruldu.
+</p>
+
+@if (!Model.Any())
+{
+    <div class="empty">Önümüzdeki hafta için tahmin bulunamadı. Yönetim panelinden tahmin üretin.</div>
+}
+
+@foreach (var coupon in Model)
+{
+    <div class="panel weekly">
+        <div class="panel-head">
+            <div>
+                <h3>@coupon.Name Kupon</h3>
+                <p class="muted small">@coupon.Description</p>
+            </div>
+            <div class="weekly-odds">
+                <b>@coupon.TotalOdds.ToString("0.00")</b>
+                <span class="muted small">%@((coupon.CombinedProbability * 100).ToString("0.#")) tutma</span>
+            </div>
+        </div>
+
+        <table class="table">
+            <tbody>
+            @foreach (var pick in coupon.Picks)
+            {
+                <tr>
+                    <td class="muted small">@pick.KickoffUtc.ToLocalTime().ToString("dd.MM HH:mm")</td>
+                    <td class="muted small">@pick.LeagueName</td>
+                    <td>@pick.HomeTeamName - @pick.AwayTeamName</td>
+                    <td><span class="pick-tag">@pick.Label</span></td>
+                    <td class="center"><b>@pick.Odds.ToString("0.00")</b></td>
+                    <td class="center muted small">%@((pick.Probability * 100).ToString("0"))</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <form asp-action="CreateFromWeekly" method="post" class="weekly-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="couponName" value="@coupon.Name" />
+            @foreach (var pick in coupon.Picks)
+            {
+                <input type="hidden" name="matchIds" value="@pick.MatchId" />
+                <input type="hidden" name="selections" value="@pick.Selection" />
+            }
+            <input name="stake" type="number" value="100" min="1" class="mini-input wide" />
+            <span class="muted small">₺ ile oyna →</span>
+            <button class="btn btn-primary small-btn">Kuponlarıma ekle</button>
+        </form>
+    </div>
+}

@@ -1,0 +1,240 @@
+@model CouponBuilderViewModel
+@{
+    ViewData["Title"] = "Kuponlarım";
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <h1>Kupon Oluştur</h1>
+    <div class="hero-stats">
+        <div><b>@Model.OpenCount</b><span>Açık</span></div>
+        <div><b>@Model.WonCount</b><span>Kazanan</span></div>
+        <div><b>@Model.LostCount</b><span>Kaybeden</span></div>
+        <div><b>@Model.WinRate.ToString("0.#")%</b><span>Başarı</span></div>
+    </div>
+</div>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-error">@err</div>
+}
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-ok">@ok</div>
+}
+
+@if (Model.Suggestions.Any())
+{
+    <h2 class="sec">Model Önerileri</h2>
+    <div class="suggest-grid">
+        @foreach (var s in Model.Suggestions)
+        {
+            <div class="suggest-card" data-match="@s.MatchId" data-sel="@s.Selection"
+                 data-label="@s.Label" data-odds="@s.Odds.ToString("0.00", ci)"
+                 data-teams="@s.HomeTeamName - @s.AwayTeamName">
+                <div class="suggest-league">@s.LeagueName</div>
+                <div class="suggest-teams">@s.HomeTeamName - @s.AwayTeamName</div>
+                <div class="suggest-pick">@s.Label</div>
+                <div class="suggest-foot">
+                    <span class="suggest-odds">@s.Odds.ToString("0.00")</span>
+                    <span class="muted small">%@((s.Probability * 100).ToString("0"))</span>
+                </div>
+                <button type="button" class="btn btn-ghost small-btn add-suggest">Kupona ekle</button>
+            </div>
+        }
+    </div>
+}
+
+<div class="coupon-layout">
+    <div>
+        <h2 class="sec">Maçlar</h2>
+        <div class="board">
+            @foreach (var m in Model.AvailableMatches)
+            {
+                <div class="crow" data-match="@m.MatchId" data-teams="@m.HomeTeamName - @m.AwayTeamName">
+                    <div class="crow-time">
+                        <span class="row-date">@m.KickoffUtc.ToLocalTime().ToString("dd.MM")</span>
+                        <span class="row-hour">@m.KickoffUtc.ToLocalTime().ToString("HH:mm")</span>
+                    </div>
+                    <div class="crow-teams">
+                        <span>@m.HomeTeamName</span>
+                        <em>vs</em>
+                        <span>@m.AwayTeamName</span>
+                    </div>
+                    <div class="crow-picks">
+                        @{
+                            var options = new (string Code, string Text, double? Prob)[]
+                            {
+                                ("HomeWin", "1", m.HomeWinProbability),
+                                ("Draw", "X", m.DrawProbability),
+                                ("AwayWin", "2", m.AwayWinProbability)
+                            };
+                        }
+                        @foreach (var o in options)
+                        {
+                            var odds = o.Prob is > 0.02 and < 0.99
+                                ? (1.0 / o.Prob.Value / 1.06).ToString("0.00", ci)
+                                : null;
+
+                            if (odds is not null)
+                            {
+                                <button type="button" class="pick"
+                                        data-sel="@o.Code" data-odds="@odds"
+                                        data-label="@o.Text">
+                                    <b>@o.Text</b>@odds
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <aside class="slip">
+        <h3>Kuponum <span id="slip-count" class="badge">0</span></h3>
+
+        <form asp-action="Create" method="post" id="coupon-form">
+            @Html.AntiForgeryToken()
+
+            <div id="slip-items" class="slip-items">
+                <p class="muted small">Maç seçerek kupon oluşturun.</p>
+            </div>
+
+            <label class="slip-label">Kupon adı</label>
+            <input name="title" value="Kuponum" class="slip-input" />
+
+            <label class="slip-label">Tutar (₺)</label>
+            <input name="stake" type="number" min="1" step="1" value="100" class="slip-input" id="stake" />
+
+            <div class="slip-summary">
+                <div><span>Toplam oran</span><b id="total-odds">1.00</b></div>
+                <div><span>Olası kazanç</span><b id="potential">0,00 ₺</b></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary full" id="submit-btn" disabled>Kuponu oluştur</button>
+        </form>
+    </aside>
+</div>
+
+@if (Model.MyCoupons.Any())
+{
+    <h2 class="sec">Geçmiş Kuponlar</h2>
+    <div class="board">
+        <div class="board-head coupon-head">
+            <span>Tarih</span><span>Ad</span><span>Seçim</span><span>Oran</span><span>Tutar</span><span>Durum</span>
+        </div>
+        @foreach (var c in Model.MyCoupons)
+        {
+            <a class="row coupon-row" asp-action="Detail" asp-route-id="@c.Id">
+                <span class="muted small">@c.CreatedAtUtc.ToLocalTime().ToString("dd.MM HH:mm")</span>
+                <span>@c.Title</span>
+                <span class="muted">@c.Items.Count maç</span>
+                <span><b>@c.TotalOdds.ToString("0.00")</b></span>
+                <span>@c.Stake.ToString("0") ₺</span>
+                <span class="state coupon-@c.Status.ToString().ToLower()">
+                    @(c.Status switch
+                    {
+                        CouponStatus.Open => "Devam",
+                        CouponStatus.Won => "Kazandı",
+                        CouponStatus.Lost => "Kaybetti",
+                        _ => "İptal"
+                    })
+                </span>
+            </a>
+        }
+    </div>
+}
+
+@section Scripts {
+<script>
+(function () {
+  var picks = new Map();
+
+  function render() {
+    var box = document.getElementById('slip-items');
+    var count = document.getElementById('slip-count');
+    var totalEl = document.getElementById('total-odds');
+    var potEl = document.getElementById('potential');
+    var btn = document.getElementById('submit-btn');
+
+    count.textContent = picks.size;
+    btn.disabled = picks.size === 0;
+
+    if (picks.size === 0) {
+      box.innerHTML = '<p class="muted small">Maç seçerek kupon oluşturun.</p>';
+      totalEl.textContent = '1.00';
+      potEl.textContent = '0,00 ₺';
+      return;
+    }
+
+    var total = 1, html = '';
+    picks.forEach(function (p, id) {
+      total *= parseFloat(p.odds);
+      html += '<div class="slip-item">' +
+        '<input type="hidden" name="matchIds" value="' + id + '" />' +
+        '<input type="hidden" name="selections" value="' + p.sel + '" />' +
+        '<div><span class="slip-teams">' + p.teams + '</span>' +
+        '<span class="slip-pick">' + p.label + '</span></div>' +
+        '<div class="slip-right"><b>' + p.odds + '</b>' +
+        '<button type="button" class="slip-x" data-remove="' + id + '">×</button></div></div>';
+    });
+
+    box.innerHTML = html;
+    totalEl.textContent = total.toFixed(2);
+
+    var stake = parseFloat(document.getElementById('stake').value) || 0;
+    potEl.textContent = (stake * total).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
+
+    box.querySelectorAll('[data-remove]').forEach(function (x) {
+      x.addEventListener('click', function () {
+        picks.delete(parseInt(this.dataset.remove, 10));
+        document.querySelectorAll('.pick.on').forEach(function (b) {
+          var row = b.closest('.crow');
+          if (row && !picks.has(parseInt(row.dataset.match, 10))) b.classList.remove('on');
+        });
+        render();
+      });
+    });
+  }
+
+  document.querySelectorAll('.crow .pick').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var row = this.closest('.crow');
+      var id = parseInt(row.dataset.match, 10);
+
+      row.querySelectorAll('.pick').forEach(function (b) { b.classList.remove('on'); });
+
+      if (picks.has(id) && picks.get(id).sel === this.dataset.sel) {
+        picks.delete(id);
+      } else {
+        this.classList.add('on');
+        picks.set(id, {
+          sel: this.dataset.sel,
+          odds: this.dataset.odds,
+          label: this.dataset.label,
+          teams: row.dataset.teams
+        });
+      }
+      render();
+    });
+  });
+
+  document.querySelectorAll('.add-suggest').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var card = this.closest('.suggest-card');
+      picks.set(parseInt(card.dataset.match, 10), {
+        sel: card.dataset.sel,
+        odds: card.dataset.odds,
+        label: card.dataset.label,
+        teams: card.dataset.teams
+      });
+      render();
+    });
+  });
+
+  document.getElementById('stake').addEventListener('input', render);
+  render();
+})();
+</script>
+}

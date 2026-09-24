@@ -1,0 +1,52 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = "Bülten";
+}
+
+<section class="hero">
+    <div>
+        <h1>Bülten</h1>
+        <p>Takım gücü, form ve karşılıklı geçmişten üretilen model tahminleri.</p>
+    </div>
+    <div class="hero-stats">
+        <div><b>@Model.TotalMatches.ToString("N0")</b><span>Maç</span></div>
+        <div><b>@Model.TotalPredictions.ToString("N0")</b><span>Tahmin</span></div>
+        <div><b>@Model.PredictionAccuracy.ToString("0.#")%</b><span>Doğruluk</span></div>
+        <div><b>@(Model.ModelTrained ? "ML" : "Poisson")</b><span>Model</span></div>
+    </div>
+</section>
+
+@if (Model.LiveMatches.Any())
+{
+    <h2 class="sec"><span class="live-dot"></span>Canlı</h2>
+    <div class="board" id="live-grid">
+        @foreach (var m in Model.LiveMatches) { <partial name="_MatchRow" model="m" /> }
+    </div>
+}
+
+<h2 class="sec">Öne Çıkan Tahminler</h2>
+@if (Model.TopPredictions.Any())
+{
+    <div class="board">
+        <div class="board-head">
+            <span>Tarih</span><span>Lig</span><span>Müsabaka</span><span>Model Oranı</span><span>Güven</span><span></span>
+        </div>
+        @foreach (var m in Model.TopPredictions) { <partial name="_MatchRow" model="m" /> }
+    </div>
+}
+else
+{
+    <div class="empty">Tahmin yok. <code>/dev/demo</code> → <code>/dev/train</code> → <code>/dev/predict</code> çalıştır.</div>
+}
+
+<h2 class="sec">Bugün</h2>
+@if (Model.TodayMatches.Any())
+{
+    <div class="board">
+        @foreach (var m in Model.TodayMatches) { <partial name="_MatchRow" model="m" /> }
+    </div>
+}
+else
+{
+    <div class="empty">Bugün için kayıtlı maç yok.</div>
+}

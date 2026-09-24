@@ -1,0 +1,66 @@
+@model MatchListItemViewModel
+@{
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+
+    string Odds(double? prob)
+    {
+        if (prob is null or <= 0.02) return "-";
+        return (1.0 / prob.Value / 1.06).ToString("0.00", ci);
+    }
+
+    var isLive = Model.Status is MatchStatus.Live or MatchStatus.HalfTime;
+    var pick = Model.PredictedOutcome;
+}
+
+<a class="row @(isLive ? "row-live" : "")" asp-controller="Matches" asp-action="Detail" asp-route-id="@Model.MatchId">
+    <button type="button" class="fav-btn @(Model.IsFavorite ? "on" : "")"
+            data-match="@Model.MatchId" title="Favorilere ekle">★</button>
+
+    <div class="row-time">
+        <span class="row-date">@Model.KickoffUtc.ToLocalTime().ToString("dd.MM")</span>
+        <span class="row-hour">@Model.KickoffUtc.ToLocalTime().ToString("HH:mm")</span>
+    </div>
+
+    <div class="row-league" title="@Model.LeagueName">
+        @if (!string.IsNullOrEmpty(Model.LeagueLogoUrl))
+        {
+            <img src="@Model.LeagueLogoUrl" alt="" />
+        }
+        <span>@Model.LeagueName</span>
+    </div>
+
+    <div class="row-teams">
+        <span class="t">@Model.HomeTeamName</span>
+        <span class="vs">@(Model.Status == MatchStatus.Scheduled ? "vs" : Model.ScoreText)</span>
+        <span class="t">@Model.AwayTeamName</span>
+    </div>
+
+    <div class="row-odds">
+        <span class="odd @(pick == MatchOutcome.HomeWin ? "hit" : "")">
+            <b>1</b>@Odds(Model.HomeWinProbability)
+        </span>
+        <span class="odd @(pick == MatchOutcome.Draw ? "hit" : "")">
+            <b>X</b>@Odds(Model.DrawProbability)
+        </span>
+        <span class="odd @(pick == MatchOutcome.AwayWin ? "hit" : "")">
+            <b>2</b>@Odds(Model.AwayWinProbability)
+        </span>
+    </div>
+
+    <div class="row-conf">
+        @if (Model.Confidence.HasValue)
+        {
+            <span class="conf-ring" style="--v:@Model.Confidence.Value.ToString("0", ci)">
+                @Model.Confidence.Value.ToString("0")
+            </span>
+        }
+        else
+        {
+            <span class="conf-none">–</span>
+        }
+    </div>
+
+    <div class="row-state">
+        <span class="state state-@Model.Status.ToString().ToLower()">@Model.StateLabel</span>
+    </div>
+</a>

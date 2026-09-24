@@ -1,0 +1,56 @@
+@model MatchListViewModel
+@{
+    ViewData["Title"] = Model.Mode switch
+    {
+        "live" => "Canlı",
+        "results" => "Sonuçlar",
+        _ => "Bülten"
+    };
+}
+
+<div class="page-head">
+    <h1>@ViewData["Title"]</h1>
+    <div class="tabs">
+        <a class="tab @(Model.Mode == "upcoming" ? "active" : "")" asp-action="Index" asp-route-mode="upcoming" asp-route-leagueId="@Model.SelectedLeagueId">Bülten</a>
+        <a class="tab @(Model.Mode == "live" ? "active" : "")" asp-action="Index" asp-route-mode="live" asp-route-leagueId="@Model.SelectedLeagueId">Canlı</a>
+        <a class="tab @(Model.Mode == "results" ? "active" : "")" asp-action="Index" asp-route-mode="results" asp-route-leagueId="@Model.SelectedLeagueId">Sonuçlar</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <a class="tab @(Model.Mode == "favorites" ? "active" : "")" asp-action="Index" asp-route-mode="favorites" asp-route-leagueId="@Model.SelectedLeagueId">★ Favoriler</a>
+        }
+    </div>
+</div>
+
+<div class="league-filter">
+    <a class="pill @(Model.SelectedLeagueId == null ? "active" : "")" asp-action="Index" asp-route-mode="@Model.Mode">Tümü</a>
+    @foreach (var l in Model.Leagues)
+    {
+        <a class="pill @(Model.SelectedLeagueId == l.Id ? "active" : "")" asp-action="Index" asp-route-mode="@Model.Mode" asp-route-leagueId="@l.Id">
+            @if (!string.IsNullOrEmpty(l.LogoUrl)) { <img src="@l.LogoUrl" alt="" /> }
+            @l.Name
+        </a>
+    }
+</div>
+
+@if (Model.Matches.Any())
+{
+    <div class="board">
+        <div class="board-head">
+            <span>Tarih</span><span>Lig</span><span>Müsabaka</span><span>Model Oranı</span><span>Güven</span><span>Durum</span>
+        </div>
+        @foreach (var m in Model.Matches) { <partial name="_MatchRow" model="m" /> }
+    </div>
+}
+else
+{
+    <div class="empty">
+        @if (Model.Mode == "favorites")
+        {
+            <text>Henüz favori maçın yok. Maç listesindeki ★ ikonuna tıklayarak ekleyebilirsin.</text>
+        }
+        else
+        {
+            <text>Bu filtreye uyan maç yok.</text>
+        }
+    </div>
+}

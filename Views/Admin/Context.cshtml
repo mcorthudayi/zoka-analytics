@@ -1,0 +1,88 @@
+@model List<ZokaAnalytics.Models.Match>
+@{
+    ViewData["Title"] = "Maç Bağlamı";
+}
+
+<div class="page-head">
+    <h1>Maç Bağlamı</h1>
+    <a class="btn btn-ghost" asp-action="Index">← Panel</a>
+</div>
+
+<p class="muted">
+    Modelin veriden göremediği durumlar. Buraya girilen bilgiler beklenen gol
+    değerini düzeltir ve maç sayfasında <b>manuel düzeltme</b> olarak gösterilir —
+    model çıktısı gibi sunulmaz.
+</p>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-ok">@ok</div>
+}
+
+@foreach (var match in Model)
+{
+    var ctx = ViewBag.Contexts is Dictionary<int, MatchContext> map && map.TryGetValue(match.Id, out var c)
+        ? c : new MatchContext();
+
+    <div class="panel ctx-panel">
+        <div class="ctx-head">
+            <div>
+                <span class="muted small">@match.League.Name · @match.KickoffUtc.ToLocalTime().ToString("dd.MM HH:mm")</span>
+                <h3>@match.HomeTeam.Name - @match.AwayTeam.Name</h3>
+            </div>
+            @if (ctx.HasAnyAdjustment)
+            {
+                <span class="pick-tag">@ctx.Summary()</span>
+            }
+        </div>
+
+        <form asp-action="SaveContext" method="post" class="ctx-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="matchId" value="@match.Id" />
+
+            <div class="ctx-cols">
+                <div>
+                    <span class="ctx-team">@match.HomeTeam.Name</span>
+                    <label class="ctx-row">
+                        Eksik önemli oyuncu
+                        <input type="number" name="homeKeyPlayersMissing" min="0" max="5"
+                               value="@ctx.HomeKeyPlayersMissing" class="mini-input" />
+                    </label>
+                    <label class="ctx-row">
+                        <input type="checkbox" name="homeCoachChanged" value="true"
+                               @(ctx.HomeCoachChanged ? "checked" : "") /> Teknik direktör değişti
+                    </label>
+                    <label class="ctx-row">
+                        <input type="checkbox" name="homeNothingToPlayFor" value="true"
+                               @(ctx.HomeNothingToPlayFor ? "checked" : "") /> Oynayacağı bir şey yok
+                    </label>
+                </div>
+
+                <div>
+                    <span class="ctx-team">@match.AwayTeam.Name</span>
+                    <label class="ctx-row">
+                        Eksik önemli oyuncu
+                        <input type="number" name="awayKeyPlayersMissing" min="0" max="5"
+                               value="@ctx.AwayKeyPlayersMissing" class="mini-input" />
+                    </label>
+                    <label class="ctx-row">
+                        <input type="checkbox" name="awayCoachChanged" value="true"
+                               @(ctx.AwayCoachChanged ? "checked" : "") /> Teknik direktör değişti
+                    </label>
+                    <label class="ctx-row">
+                        <input type="checkbox" name="awayNothingToPlayFor" value="true"
+                               @(ctx.AwayNothingToPlayFor ? "checked" : "") /> Oynayacağı bir şey yok
+                    </label>
+                </div>
+            </div>
+
+            <label class="ctx-row">
+                <input type="checkbox" name="isDerby" value="true" @(ctx.IsDerby ? "checked" : "") /> Derbi
+            </label>
+
+            <input name="note" value="@ctx.Note" placeholder="Not (opsiyonel)" class="slip-input" />
+
+            <button class="btn btn-primary small-btn">Kaydet ve tahmini yenile</button>
+        </form>
+    </div>
+}

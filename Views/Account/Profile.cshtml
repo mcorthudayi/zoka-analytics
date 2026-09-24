@@ -1,0 +1,33 @@
+@model ApplicationUser
+@{
+    ViewData["Title"] = "Profil";
+    var quota = ViewBag.Quota as QuotaCheckResult;
+}
+
+<div class="panel">
+    <h1>@Model.FullName</h1>
+    <p class="muted">@Model.Email</p>
+
+    <div class="metric-row">
+        <div class="metric">
+            <span class="metric-value">@Model.EffectiveTier</span>
+            <span class="metric-label">Paket</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">
+                @(quota is null ? "-" : quota.IsUnlimited ? "Sınırsız" : $"{quota.Used} / {quota.Limit}")
+            </span>
+            <span class="metric-label">Bugünkü tahmin hakkı</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">
+                @(Model.SubscriptionExpiresAtUtc?.ToLocalTime().ToString("dd.MM.yyyy") ?? "-")
+            </span>
+            <span class="metric-label">Bitiş</span>
+        </div>
+        <div class="metric">
+            <span class="metric-value">@Model.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy")</span>
+            <span class="metric-label">Üyelik</span>
+        </div>
+    </div>
+</div>

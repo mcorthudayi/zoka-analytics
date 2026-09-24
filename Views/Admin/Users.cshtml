@@ -1,0 +1,63 @@
+@model List<ApplicationUser>
+@{
+    ViewData["Title"] = "Kullanıcılar";
+}
+
+<div class="page-head">
+    <h1>Kullanıcılar</h1>
+    <a class="btn btn-ghost" asp-action="Index">← Panel</a>
+</div>
+
+@if (TempData["Success"] is string ok)
+{
+    <div class="alert alert-ok">@ok</div>
+}
+
+<div class="panel">
+    <table class="table">
+        <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>
+                    <b>@u.FullName</b><br />
+                    <span class="muted small">@u.Email</span>
+                </td>
+                <td>
+                    <span class="tier tier-@u.EffectiveTier.ToString().ToLower()">@u.EffectiveTier</span>
+                    @if (u.IsBanned)
+                    {
+                        <span class="state sel-lost">Askıda</span>
+                    }
+                </td>
+                <td class="muted small">
+                    @u.CreatedAtUtc.ToLocalTime().ToString("dd.MM.yyyy")
+                </td>
+                <td>
+                    <form asp-action="SetTier" method="post" class="inline-form">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@u.Id" />
+                        <select name="tier" class="mini-select">
+                            @foreach (var t in Enum.GetValues<SubscriptionTier>())
+                            {
+                                <option value="@t" selected="@(t == u.Tier)">@t</option>
+                            }
+                        </select>
+                        <input name="months" type="number" value="1" min="1" max="24" class="mini-input" />
+                        <button class="btn btn-ghost small-btn">Uygula</button>
+                    </form>
+                </td>
+                <td>
+                    <form asp-action="ToggleBan" method="post" class="inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="userId" value="@u.Id" />
+                        <button class="btn @(u.IsBanned ? "btn-ghost" : "btn-danger") small-btn">
+                            @(u.IsBanned ? "Aç" : "Askıya al")
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
